@@ -1,0 +1,243 @@
+
+<html><head><title>SailNavSim Race Maps</title>
+    <link rel="icon" href="./img/favicon-16.png" sizes="16x16"><link rel="icon" href="./img/favicon-32.png" sizes="32x32"><link rel="icon" href="./img/favicon-64.png" sizes="64x64"><link rel="icon" href="./img/favicon-128.png" sizes="128x128"><style>
+    .mapview { width:80vw; height:80vh; margin:0; padding:0; overflow:hidden; }
+    </style>
+    </head><body><p align=right><a href=".">Start</a> | <a href="races.php">Races</a> | <a href="./maps/">Maps</a> | <a href="help.html">Help</a> | <a href="./api/">API</a> | <a href="https://github.com/ls4096/sailnavsim-core">GitHub</a> | <a href="https://twitter.com/SailNavSim">Twitter</a> | <a href="contact.php">Contact</a></p><p align=left><img src="./img/white.png"><font style="font-size: 24px"><i>SailNavSim</i></font></p><hr width=100%><h3>Maps for Captain Mooperd (key=8778615748e7d311a8f9302acd5faa23)</h3><br><a href="#race-map">Race Map</a><br><a href="#windy-map">Weather Forecast Map</a><br><br><hr width=100%><center><br><h4 id="race-map">Race Map</h4><table cellpadding=10 cellspacing=0 border=1><tr><td>Show live boat: <input type="checkbox" id="liveBoatMode"><br><br>Data overlay: <select id="overlayTile"><option value="none" selected>None</option><option value="wind">Wind</option><option value="wind_gust">Wind Gust</option><option value="ocean_current">Ocean Current</option><option value="sea_ice">Sea Ice</option><option value="wave_height">Wave Height</option></select></td></tr></table><br>Boat positions as of 2021-04-16 0553Z (9s ago)<br><link rel="stylesheet" href="assets/leaflet.css"><script src="assets/leaflet.js"></script><link rel="stylesheet" type="text/css" href="assets/leaflet-ruler.css"><script src="assets/leaflet-ruler.js"></script><script src="assets/leaflet.rotatedMarker.js"></script><div class="mapview" id="mapid"></div>
+    <script>
+    var mymap = L.map('mapid').setView([35.717000, 140.888000], 7);
+    L.control.scale().addTo(mymap);
+    var rulerOpts = { lengthUnit: { factor: 0.539956803, display: "NM", decimal: 1, label: "Distance" }, angleUnit: { factor: null, display: "&deg;", decimal: 1, label: "Course" } };L.control.ruler(rulerOpts).addTo(mymap);
+    L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}.png', {
+    attribution: 'Map tiles by <a href="https://stamen.com/">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://www.openstreetmap.org/">OpenStreetMap</a>, under <a href="https://www.openstreetmap.org/copyright">ODbL</a>.',
+    }).addTo(mymap);
+    var wxWindLayer = L.tileLayer('https://8bitbyte.ca/sailnavsim/wxtile.php?z={z}&x={x}&y={y}&t=wind');
+    var wxWindGustLayer = L.tileLayer('https://8bitbyte.ca/sailnavsim/wxtile.php?z={z}&x={x}&y={y}&t=wind_gust');
+    var wxOceanCurrentLayer = L.tileLayer('https://8bitbyte.ca/sailnavsim/wxtile.php?z={z}&x={x}&y={y}&t=ocean_current');
+    var wxSeaIceLayer = L.tileLayer('https://8bitbyte.ca/sailnavsim/wxtile.php?z={z}&x={x}&y={y}&t=sea_ice');
+    var wxWaveHeightLayer = L.tileLayer('https://8bitbyte.ca/sailnavsim/wxtile.php?z={z}&x={x}&y={y}&t=wave_height');
+    var wsUri = 'wss://8bitbyte.ca/sailnavsim/snsws/v1/ws';
+    var ws = null;
+    document.getElementById("overlayTile").onchange = function() { overlayTileChange() };
+    document.getElementById("overlayTile").value = "none";
+    function overlayTileChange() {
+      wxWindLayer.remove();
+      wxWindGustLayer.remove();
+      wxOceanCurrentLayer.remove();
+      wxSeaIceLayer.remove();
+      wxWaveHeightLayer.remove();
+      var overlayTile = document.getElementById("overlayTile").value;
+      if (overlayTile == "wind") {
+        wxWindLayer.addTo(mymap);
+      } else if (overlayTile == "wind_gust") {
+        wxWindGustLayer.addTo(mymap);
+      } else if (overlayTile == "ocean_current") {
+        wxOceanCurrentLayer.addTo(mymap);
+      } else if (overlayTile == "sea_ice") {
+        wxSeaIceLayer.addTo(mymap);
+      } else if (overlayTile == "wave_height") {
+        wxWaveHeightLayer.addTo(mymap);
+      }
+    }
+    document.getElementById("liveBoatMode").onclick = function() { liveBoatModeClick() };
+    document.getElementById("liveBoatMode").checked = false;
+    function liveBoatModeClick() {
+      var ch = document.getElementById("liveBoatMode").checked;
+      if (ch == true) {
+        ws = new WebSocket(wsUri)
+        ws.onopen = function(event) { wsOpen() };
+        ws.onclose = function(event) { wsClose() };
+        ws.onmessage = function(event) { wsMsg(event) };
+        ws.onerror = function(event) { ws.close() };
+      } else {
+        ws.close();
+      }
+    }
+    function wsOpen() {
+      ws.send(JSON.stringify({cmd:'bdl',key:'8778615748e7d311a8f9302acd5faa23'}));
+    }
+    function wsClose() {
+      updateLiveBoat(null);
+      ws = null;
+    }
+    function wsMsg(event) {
+      updateLiveBoat(JSON.parse(event.data));
+    }
+    var liveBoatIconYellow = new L.Icon({
+    iconUrl: './img/top-yellow.png',
+    iconSize: [16, 35],
+    iconAnchor: [16, 17.5],
+    popupAnchor: [0, -25],
+    });
+    var liveBoatIcon = new L.Icon({
+    iconUrl: './img/top-yellow.png',
+    iconSize: [16, 35],
+    iconAnchor: [8, 17.5],
+    popupAnchor: [0, -20],
+    });
+    var liveBoatMarker = L.marker([0,0], {icon: liveBoatIcon, rotationAngle: 0, rotationOrigin: "center"});
+    var liveBoatMarkerAdded = false;
+    function updateLiveBoat(boat) {
+      if (boat == null) { liveBoatMarker.remove(); liveBoatMarkerAdded = false; return; }
+      liveBoatMarker.setLatLng(L.latLng(boat.lat, boat.lon));
+      liveBoatMarker.setRotationAngle(boat.ctw);
+      var tw_str = printAngleMag(boat.ctw, boat.stw);
+      var og_str = printAngleMag(boat.cog, boat.sog);
+      liveBoatMarker.bindPopup("<center><b>Captain Mooperd</b><br><i>--- LIVE ---</i></center><hr width=80% color=#c0c0c0><p align=right>Through Water: " + tw_str + "<br>Over Ground: " + og_str + "</p>");
+      if (liveBoatMarkerAdded == false) { liveBoatMarker.addTo(mymap); liveBoatMarkerAdded = true; }
+    }
+    function printAngleMag(a, m) {
+      return Math.round(a).toString().padStart(3, '0') + "&#176 / " + (m * 1.943844).toFixed(1) + " kts"
+    }
+    var startMarker = L.circleMarker(
+    [35.717, 140.888],
+    { radius: 6, weight: 2, color: '#002080', fillColor: '#0040ff', fillOpacity: 0.1 }).addTo(mymap);
+    var startMarkerL = L.circleMarker(
+    [35.717, -219.112],
+    { radius: 6, weight: 2, color: '#002080', fillColor: '#0040ff', fillOpacity: 0.1 }).addTo(mymap);
+    var startMarkerR = L.circleMarker(
+    [35.717, 500.888],
+    { radius: 6, weight: 2, color: '#002080', fillColor: '#0040ff', fillOpacity: 0.1 }).addTo(mymap);
+    startMarker.bindPopup("Race start position");
+    startMarkerL.bindPopup("Race start position");
+    startMarkerR.bindPopup("Race start position");
+    var finishPoly = L.polygon([
+    [35.083666666667, 141.838],
+    [35.267, 141.838],
+    [35.267, 142.75466666667],
+    [35.083666666667, 142.75466666667]
+    ], { weight: 2, color: '#008020', fillColor: '#00ff40', fillOpacity: 0.1 }).addTo(mymap);
+    var finishPolyL = L.polygon([
+    [35.083666666667, -218.162],
+    [35.267, -218.162],
+    [35.267, -217.24533333333],
+    [35.083666666667, -217.24533333333]
+    ], { weight: 2, color: '#008020', fillColor: '#00ff40', fillOpacity: 0.1 }).addTo(mymap);
+    var finishPolyR = L.polygon([
+    [35.083666666667, 501.838],
+    [35.267, 501.838],
+    [35.267, 502.75466666667],
+    [35.083666666667, 502.75466666667]
+    ], { weight: 2, color: '#008020', fillColor: '#00ff40', fillOpacity: 0.1 }).addTo(mymap);
+    finishPoly.bindPopup("Finish anywhere (land or water) within box");
+    finishPolyL.bindPopup("Finish anywhere (land or water) within box");
+    finishPolyR.bindPopup("Finish anywhere (land or water) within box");
+    var ll0 = [
+    [35.717000, 140.888000],
+    [35.717000, 140.888000]
+    ];
+    var llL0 = [
+    [35.717000, -219.112000],
+    [35.717000, -219.112000]
+    ];
+    var llR0 = [
+    [35.717000, 500.888000],
+    [35.717000, 500.888000]
+    ];
+    var l0 = L.polyline(ll0, {color: '#404040', weight: 2, opacity: 0.6}).addTo(mymap);
+    var lL0 = L.polyline(llL0, {color: '#404040', weight: 2, opacity: 0.6}).addTo(mymap);
+    var lR0 = L.polyline(llR0, {color: '#404040', weight: 2, opacity: 0.6}).addTo(mymap);
+    var whiteIcon = new L.Icon({
+    iconUrl: './img/white.png',
+    iconSize: [32, 32],
+    iconAnchor: [16, 26],
+    popupAnchor: [0, -20],
+    });
+    var whiteIconE = new L.Icon({
+    iconUrl: './img/white_e.png',
+    iconSize: [32, 32],
+    iconAnchor: [16, 26],
+    popupAnchor: [0, -20],
+    });
+    var whiteIconD = new L.Icon({
+    iconUrl: './img/white_d.png',
+    iconSize: [32, 32],
+    iconAnchor: [16, 26],
+    popupAnchor: [0, -20],
+    });
+    var yellowIcon = new L.Icon({
+    iconUrl: './img/yellow.png',
+    iconSize: [32, 32],
+    iconAnchor: [16, 26],
+    popupAnchor: [0, -20],
+    });
+    var yellowIconE = new L.Icon({
+    iconUrl: './img/yellow_e.png',
+    iconSize: [32, 32],
+    iconAnchor: [16, 26],
+    popupAnchor: [0, -20],
+    });
+    var yellowIconD = new L.Icon({
+    iconUrl: './img/yellow_d.png',
+    iconSize: [32, 32],
+    iconAnchor: [16, 26],
+    popupAnchor: [0, -20],
+    });
+    var lightGreenIcon = new L.Icon({
+    iconUrl: './img/light_green.png',
+    iconSize: [32, 32],
+    iconAnchor: [16, 26],
+    popupAnchor: [0, -20],
+    });
+    var lightGreenIconE = new L.Icon({
+    iconUrl: './img/light_green_e.png',
+    iconSize: [32, 32],
+    iconAnchor: [16, 26],
+    popupAnchor: [0, -20],
+    });
+    var lightGreenIconD = new L.Icon({
+    iconUrl: './img/light_green_d.png',
+    iconSize: [32, 32],
+    iconAnchor: [16, 26],
+    popupAnchor: [0, -20],
+    });
+    var darkGreenIcon = new L.Icon({
+    iconUrl: './img/dark_green.png',
+    iconSize: [32, 32],
+    iconAnchor: [16, 26],
+    popupAnchor: [0, -20],
+    });
+    var darkGreenIconE = new L.Icon({
+    iconUrl: './img/dark_green_e.png',
+    iconSize: [32, 32],
+    iconAnchor: [16, 26],
+    popupAnchor: [0, -20],
+    });
+    var darkGreenIconD = new L.Icon({
+    iconUrl: './img/dark_green_d.png',
+    iconSize: [32, 32],
+    iconAnchor: [16, 26],
+    popupAnchor: [0, -20],
+    });
+    var yellowIcon2 = new L.Icon({
+    iconUrl: './img/yellow.png',
+    iconSize: [20, 20],
+    iconAnchor: [10, 17],
+    popupAnchor: [0, -13],
+    });
+    var yellowIcon2E = new L.Icon({
+    iconUrl: './img/yellow_e.png',
+    iconSize: [20, 20],
+    iconAnchor: [10, 17],
+    popupAnchor: [0, -13],
+    });
+    var darkGreenIcon2 = new L.Icon({
+    iconUrl: './img/dark_green.png',
+    iconSize: [20, 20],
+    iconAnchor: [10, 17],
+    popupAnchor: [0, -13],
+    });
+    var darkGreenIcon2E = new L.Icon({
+    iconUrl: './img/dark_green_e.png',
+    iconSize: [20, 20],
+    iconAnchor: [10, 17],
+    popupAnchor: [0, -13],
+    });
+    var bm0 = L.marker([35.717000, 140.888000], {icon: yellowIcon}).addTo(mymap);
+    var bmL0 = L.marker([35.717000, -219.112000], {icon: yellowIcon}).addTo(mymap);
+    var bmR0 = L.marker([35.717000, 500.888000], {icon: yellowIcon}).addTo(mymap);
+    bm0.bindPopup("<center><b>Captain Mooperd</b></center><hr width=80% color=#c0c0c0>35&#176;43\'01\"N 140&#176;53\'16\"E<br>SOG: 0.0 kts<br>Wind: 140&#176; / 13 kts (gust 14)");
+    bmL0.bindPopup("<center><b>Captain Mooperd</b></center><hr width=80% color=#c0c0c0>35&#176;43\'01\"N 140&#176;53\'16\"E<br>SOG: 0.0 kts<br>Wind: 140&#176; / 13 kts (gust 14)");
+    bmR0.bindPopup("<center><b>Captain Mooperd</b></center><hr width=80% color=#c0c0c0>35&#176;43\'01\"N 140&#176;53\'16\"E<br>SOG: 0.0 kts<br>Wind: 140&#176; / 13 kts (gust 14)");
+    bm0.al = null;bmL0.al = null;bmR0.al = null;mymap.on('popupopen', function(e) { if (e.popup._source.al != null) { e.popup._source.al.setStyle({color: '#a07020', weight: 2, opacity: 0.6}); e.popup._source.alL.setStyle({color: '#a07020', weight: 2, opacity: 0.6}); e.popup._source.alR.setStyle({color: '#a07020', weight: 2, opacity: 0.6}); } });mymap.on('popupclose', function(e) { if (e.popup._source.al != null) { e.popup._source.al.setStyle({color: '#808080', weight: 1, opacity: 0.4}); e.popup._source.alL.setStyle({color: '#808080', weight: 1, opacity: 0.4}); e.popup._source.alR.setStyle({color: '#808080', weight: 1, opacity: 0.4}); } });</script>
+    <br><br><br><h4 id="windy-map">Weather Forecast Map</h4>Your boat position at 2021-04-16 0553Z (9s ago)<br>35&#176;43'01"N 140&#176;53'16"E (35.717000,140.888000)<br><div class="mapview"><iframe width="100%" height="100%" src="https://embed.windy.com/embed2.html?lat=35.717000&lon=140.888000&zoom=7&level=surface&overlay=wind&menu=&message=&marker=true&calendar=&pressure=&type=map&location=coordinates&detail=&detailLat=35.717000&detailLon=140.888000&metricWind=default&metricTemp=default&radarRange=-1" frameborder="0"></iframe></div></center></body></html><div style="height:10vh"></div></body></html>
