@@ -1,10 +1,49 @@
 
-<html><head><title>SailNavSim Race Maps</title>
-    <link rel="icon" href="./img/favicon-16.png" sizes="16x16"><link rel="icon" href="./img/favicon-32.png" sizes="32x32"><link rel="icon" href="./img/favicon-64.png" sizes="64x64"><link rel="icon" href="./img/favicon-128.png" sizes="128x128"><style>
-    .mapview { width:80vw; height:80vh; margin:0; padding:0; overflow:hidden; }
-    </style>
-    </head><body><p align=right><a href=".">Start</a> | <a href="races.php">Races</a> | <a href="./maps/">Maps</a> | <a href="help.html">Help</a> | <a href="./api/">API</a> | <a href="https://github.com/ls4096/sailnavsim-core">GitHub</a> | <a href="https://twitter.com/SailNavSim">Twitter</a> | <a href="contact.php">Contact</a></p><p align=left><img src="./img/white.png"><font style="font-size: 24px"><i>SailNavSim</i></font></p><hr width=100%><h3>Maps for Captain Mooperd (key=8778615748e7d311a8f9302acd5faa23)</h3><br><a href="#race-map">Race Map</a><br><a href="#windy-map">Weather Forecast Map</a><br><br><hr width=100%><center><br><h4 id="race-map">Race Map</h4><table cellpadding=10 cellspacing=0 border=1><tr><td>Show live boat: <input type="checkbox" id="liveBoatMode"><br><br>Data overlay: <select id="overlayTile"><option value="none" selected>None</option><option value="wind">Wind</option><option value="wind_gust">Wind Gust</option><option value="ocean_current">Ocean Current</option><option value="sea_ice">Sea Ice</option><option value="wave_height">Wave Height</option></select></td></tr></table><br>Boat positions as of 2021-04-16 0611Z (37s ago)<br><link rel="stylesheet" href="assets/leaflet.css"><script src="assets/leaflet.js"></script><link rel="stylesheet" type="text/css" href="assets/leaflet-ruler.css"><script src="assets/leaflet-ruler.js"></script><script src="assets/leaflet.rotatedMarker.js"></script><div class="mapview" id="mapid"></div>
-    <script>
+<html>
+    <head>
+       <title>SailNavSim Race Maps</title>
+       <link rel="icon" href="./img/favicon-16.png" sizes="16x16">
+       <link rel="icon" href="./img/favicon-32.png" sizes="32x32">
+       <link rel="icon" href="./img/favicon-64.png" sizes="64x64">
+       <link rel="icon" href="./img/favicon-128.png" sizes="128x128">
+       <style>
+          .mapview { width:80vw; height:80vh; margin:0; padding:0; overflow:hidden; }
+       </style>
+    </head>
+    <body>
+       <p align=right><a href=".">Start</a> | <a href="races.php">Races</a> | <a href="./maps/">Maps</a> | <a href="help.html">Help</a> | <a href="./api/">API</a> | <a href="https://github.com/ls4096/sailnavsim-core">GitHub</a> | <a href="https://twitter.com/SailNavSim">Twitter</a> | <a href="contact.php">Contact</a></p>
+       <p align=left><img src="./img/white.png"><font style="font-size: 24px"><i>SailNavSim</i></font></p>
+       <hr width=100%>
+       <h3>Maps for Captain Mooperd (key=8778615748e7d311a8f9302acd5faa23)</h3>
+       <br><a href="#race-map">Race Map</a><br><a href="#windy-map">Weather Forecast Map</a><br><br>
+       <hr width=100%>
+       <center>
+       <br>
+       <h4 id="race-map">Race Map</h4>
+       <table cellpadding=10 cellspacing=0 border=1>
+          <tr>
+             <td>
+                Show live boat: <input type="checkbox" id="liveBoatMode"><br><br>Data overlay: 
+                <select id="overlayTile">
+                   <option value="none" selected>None</option>
+                   <option value="wind">Wind</option>
+                   <option value="wind_gust">Wind Gust</option>
+                   <option value="ocean_current">Ocean Current</option>
+                   <option value="sea_ice">Sea Ice</option>
+                   <option value="wave_height">Wave Height</option>
+                </select>
+             </td>
+          </tr>
+       </table>
+       <br>Boat positions as of 2021-04-16 0611Z (37s ago)<br>
+       <link rel="stylesheet" href="assets/leaflet.css">
+       <script src="assets/leaflet.js"></script>
+       <link rel="stylesheet" type="text/css" href="assets/leaflet-ruler.css">
+       <script src="assets/leaflet-ruler.js"></script><script src="assets/leaflet.rotatedMarker.js"></script>
+       <div class="mapview" id="mapid"></div>
+       <script>
+
+
     var mymap = L.map('mapid').setView([35.717121, 140.917724], 7);
     L.control.scale().addTo(mymap);
     var rulerOpts = {
@@ -202,33 +241,18 @@
     var ll0 = [
         [35.717121, 140.917724],
         [35.717002, 140.892926],
-        [35.717000, 140.888000]
+        [35.717000, 140.888000],
+        [35.707000, 140.708000],
+        [35.607000, 140.608000]
     ];
-    var llL0 = [
-        [35.717121, -219.082276],
-        [35.717002, -219.107074],
-        [35.717000, -219.112000]
-    ];
-    var llR0 = [
-        [35.717121, 500.917724],
-        [35.717002, 500.892926],
-        [35.717000, 500.888000]
-    ];
+    //console.log(ll0)
+    getTrack().then(track => {}
     var l0 = L.polyline(ll0, {
         color: '#404040',
         weight: 2,
         opacity: 0.6
     }).addTo(mymap);
-    var lL0 = L.polyline(llL0, {
-        color: '#404040',
-        weight: 2,
-        opacity: 0.6
-    }).addTo(mymap);
-    var lR0 = L.polyline(llR0, {
-        color: '#404040',
-        weight: 2,
-        opacity: 0.6
-    }).addTo(mymap);
+    
     var whiteIcon = new L.Icon({
         iconUrl: './img/white.png',
         iconSize: [32, 32],
