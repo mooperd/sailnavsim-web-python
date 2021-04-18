@@ -36,8 +36,12 @@ class BoatRace(Base):
     startLon        = Column(Float, nullable=False)
 
 class BoatLog(Base):
+
+    __table_args__ = (
+        UniqueConstraint('boat_id', 'time'),
+    )
+
     __tablename__   = 'BoatLog'
-    id              = Column(Integer, primary_key=True)
     time            = Column(Integer, nullable=False)
     lat             = Column(Float, nullable=False)
     lon             = Column(Float, nullable=False)
@@ -65,11 +69,17 @@ class BoatLog(Base):
     damage          = Column(Float, nullable=False)
     windGust        = Column(Float, nullable=False)
     waveHeight      = Column(Float)
+    compassMagDec   = Column(Float, nullable=False)
+    invisibleLog    = Column(Integer, nullable=False)
     boat            = relation("Boat", backref="Boat")
     boat_id         = Column(Integer, ForeignKey('Boat.id'))
 
+    __mapper_args__ = {
+        "primary_key": [boat_id, time]
+    }
+
 def dbconnect():
-    engine = create_engine('sqlite:////home/andrew/sailnavsim-core/sailnavsim-orm.sql', echo=False)
+    engine = create_engine('sqlite:////home/dev/sailnavsim-core/sailnavsim.sql', echo=False)
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     return Session()
